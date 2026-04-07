@@ -2,6 +2,7 @@ export interface MapConfig {
   originX: number;
   originZ: number;
   scale: number;
+  image?: string;
 }
 
 export const MAP_CONFIGS: Record<string, MapConfig> = {
