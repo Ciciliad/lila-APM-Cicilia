@@ -17,7 +17,7 @@ const Index = () => {
   const [selectedMatchId, setSelectedMatchId] = useState<string>(MOCK_MATCHES[0].match_id);
 
   useEffect(() => {
-    fetch("/data/allData.json")
+    fetch("/data/feb10.json")
       .then((res) => res.json())
       .then((data: RawEvent[]) => {
         if (Array.isArray(data) && data.length > 0) {
