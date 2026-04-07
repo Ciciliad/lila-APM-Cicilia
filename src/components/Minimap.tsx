@@ -23,7 +23,7 @@ const Minimap = ({ match }: MinimapViewerProps) => {
   return (
     <div className="relative w-full max-w-[1024px] mx-auto">
       <div className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
-           style={{ background: `hsl(var(--minimap-bg))` }}>
+           style={{ background: config.image ? `url(${config.image}) center/cover no-repeat` : `hsl(var(--minimap-bg))` }}>
         {/* Placeholder grid for minimap background */}
         <svg
           ref={svgRef}

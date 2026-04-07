@@ -2,10 +2,11 @@ export interface MapConfig {
   originX: number;
   originZ: number;
   scale: number;
+  image?: string;
 }
 
 export const MAP_CONFIGS: Record<string, MapConfig> = {
-  AmbroseValley: { originX: -370, originZ: -473, scale: 900 },
+  AmbroseValley: { originX: -370, originZ: -473, scale: 900, image: "/maps/AmbroseValley_Minimap.png" },
   GrandRift: { originX: -290, originZ: -290, scale: 581 },
   Lockdown: { originX: -500, originZ: -500, scale: 1000 },
 };
