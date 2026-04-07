@@ -1,3 +1,13 @@
+export type EventType =
+  | "Position"
+  | "BotPosition"
+  | "Kill"
+  | "BotKill"
+  | "Killed"
+  | "BotKilled"
+  | "KilledByStorm"
+  | "Loot";
+
 export interface RawEvent {
   user_id: string;
   match_id: string;
@@ -6,6 +16,15 @@ export interface RawEvent {
   z: number;
   ts: number;
   event: string;
+  is_bot: boolean;
+}
+
+export interface GameEvent {
+  player_id: string;
+  x: number;
+  z: number;
+  ts: number;
+  event: EventType;
   is_bot: boolean;
 }
 
@@ -21,6 +40,9 @@ export interface MatchData {
   map_name: string;
   date: string;
   players: PlayerPosition[];
+  events: GameEvent[];
+  minTs: number;
+  maxTs: number;
 }
 
 export interface DateFile {
@@ -35,3 +57,6 @@ export const DATE_FILES: DateFile[] = [
   { label: "February 13", path: "/data/feb13.json" },
   { label: "February 14", path: "/data/feb14.json" },
 ];
+
+export type EventLayer = "movement" | "kills" | "deaths" | "loot" | "storm";
+export type HeatmapMode = "none" | "movement" | "kills" | "deaths";

@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
     --background: 220 20% 97%;
@@ -41,6 +37,15 @@ All colors MUST be HSL.
     --player-human: 217 91% 60%;
     --player-bot: 0 72% 51%;
     --minimap-bg: 220 20% 14%;
+
+    /* Event colors */
+    --event-movement-human: 200 80% 65%;
+    --event-movement-bot: 0 60% 65%;
+    --event-kill: 142 70% 50%;
+    --event-botkill: 45 90% 55%;
+    --event-death: 0 80% 55%;
+    --event-storm: 270 60% 55%;
+    --event-loot: 45 85% 55%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
