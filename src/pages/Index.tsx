@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { MatchData } from "@/lib/types";
+import { MatchData, RawEvent } from "@/lib/types";
 import { MOCK_MATCHES } from "@/lib/mockData";
+import { transformRawEvents } from "@/lib/transformData";
 import Minimap from "@/components/Minimap";
 import {
   Select,
@@ -18,11 +19,13 @@ const Index = () => {
   useEffect(() => {
     fetch("/data/allData.json")
       .then((res) => res.json())
-      .then((data) => {
-        const arr: MatchData[] = Array.isArray(data) ? data : [data];
-        if (arr.length > 0) {
-          setMatches(arr);
-          setSelectedMatchId(arr[0].match_id);
+      .then((data: RawEvent[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          const transformed = transformRawEvents(data);
+          if (transformed.length > 0) {
+            setMatches(transformed);
+            setSelectedMatchId(transformed[0].match_id);
+          }
         }
       })
       .catch(() => {
@@ -54,7 +57,7 @@ const Index = () => {
               <SelectContent>
                 {matches.map((m) => (
                   <SelectItem key={m.match_id} value={m.match_id}>
-                    {m.match_id} — {m.map_name}
+                    {m.match_id.slice(0, 8)}… — {m.map_name}
                   </SelectItem>
                 ))}
               </SelectContent>
