@@ -17,6 +17,7 @@ export interface RawEvent {
   ts: number;
   event: string;
   is_bot: boolean;
+  date?: string;
 }
 
 export interface GameEvent {
