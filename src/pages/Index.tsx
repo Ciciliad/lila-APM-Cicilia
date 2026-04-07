@@ -134,7 +134,7 @@ const Index = () => {
               <SelectContent>
                 {filteredMatches.map((m) => (
                   <SelectItem key={m.match_id} value={m.match_id}>
-                    {m.match_id.slice(0, 8)}… — {m.map_name}
+                    {m.match_id.slice(0, 8)}…
                   </SelectItem>
                 ))}
               </SelectContent>
