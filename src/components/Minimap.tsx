@@ -105,7 +105,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
           {heatmapData &&
             heatmapData.max > 0 &&
             heatmapData.grid.map((row, gy) =>
-              row.map((val, gx) => {
+              Array.from(row).map((val, gx) => {
                 if (val === 0) return null;
                 const intensity = val / heatmapData.max;
                 return (
