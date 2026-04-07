@@ -2,8 +2,9 @@ import { RawEvent, MatchData } from "./types";
 
 /**
  * Groups raw events by match_id, takes the latest position per user per match.
+ * Tags each match with the provided date label.
  */
-export function transformRawEvents(events: RawEvent[]): MatchData[] {
+export function transformRawEvents(events: RawEvent[], date: string): MatchData[] {
   const matchMap = new Map<string, { map_name: string; players: Map<string, { x: number; z: number; ts: number; is_bot: boolean }> }>();
 
   for (const e of events) {
@@ -12,7 +13,6 @@ export function transformRawEvents(events: RawEvent[]): MatchData[] {
     }
     const match = matchMap.get(e.match_id)!;
     const existing = match.players.get(e.user_id);
-    // Keep latest timestamp position
     if (!existing || e.ts >= existing.ts) {
       match.players.set(e.user_id, { x: e.x, z: e.z, ts: e.ts, is_bot: e.is_bot });
     }
@@ -21,6 +21,7 @@ export function transformRawEvents(events: RawEvent[]): MatchData[] {
   return Array.from(matchMap.entries()).map(([match_id, data]) => ({
     match_id,
     map_name: data.map_name,
+    date,
     players: Array.from(data.players.entries()).map(([player_id, p]) => ({
       player_id,
       x: p.x,
