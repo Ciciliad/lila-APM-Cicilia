@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { MatchData, RawEvent, DATE_FILES } from "@/lib/types";
+import { MatchData, RawEvent, DATE_FILES, EventLayer, HeatmapMode } from "@/lib/types";
 import { MOCK_MATCHES } from "@/lib/mockData";
 import { transformRawEvents } from "@/lib/transformData";
 import { MAP_CONFIGS } from "@/lib/mapConfigs";
 import Minimap from "@/components/Minimap";
+import EventControls from "@/components/EventControls";
 import {
   Select,
   SelectContent,
@@ -15,11 +16,22 @@ import { Crosshair, Users } from "lucide-react";
 
 const ALL_MAPS = Object.keys(MAP_CONFIGS);
 
+const DEFAULT_LAYERS: Record<EventLayer, boolean> = {
+  movement: true,
+  kills: true,
+  deaths: true,
+  loot: false,
+  storm: true,
+};
+
 const Index = () => {
   const [allMatches, setAllMatches] = useState<MatchData[]>(MOCK_MATCHES);
   const [selectedMap, setSelectedMap] = useState<string>("all");
   const [selectedDate, setSelectedDate] = useState<string>("all");
   const [selectedMatchId, setSelectedMatchId] = useState<string>("");
+  const [layers, setLayers] = useState<Record<EventLayer, boolean>>(DEFAULT_LAYERS);
+  const [heatmapMode, setHeatmapMode] = useState<HeatmapMode>("none");
+  const [currentTime, setCurrentTime] = useState<number>(Infinity);
 
   // Load all available date files
   useEffect(() => {
@@ -34,7 +46,7 @@ const Index = () => {
             results.push(...transformRawEvents(data, df.label));
           }
         } catch {
-          // File not available yet, skip
+          // skip
         }
       }
       if (results.length > 0) {
@@ -44,7 +56,6 @@ const Index = () => {
     loadAll();
   }, []);
 
-  // Available dates from loaded data
   const availableDates = useMemo(() => {
     let filtered = allMatches;
     if (selectedMap !== "all") {
@@ -53,7 +64,6 @@ const Index = () => {
     return [...new Set(filtered.map((m) => m.date))];
   }, [allMatches, selectedMap]);
 
-  // Available matches after map + date filter
   const filteredMatches = useMemo(() => {
     let filtered = allMatches;
     if (selectedMap !== "all") {
@@ -65,14 +75,12 @@ const Index = () => {
     return filtered;
   }, [allMatches, selectedMap, selectedDate]);
 
-  // Auto-select first match when filters change
   useEffect(() => {
     if (filteredMatches.length > 0 && !filteredMatches.find((m) => m.match_id === selectedMatchId)) {
       setSelectedMatchId(filteredMatches[0].match_id);
     }
   }, [filteredMatches, selectedMatchId]);
 
-  // Reset date when map changes and current date is no longer available
   useEffect(() => {
     if (selectedDate !== "all" && !availableDates.includes(selectedDate)) {
       setSelectedDate("all");
@@ -80,27 +88,37 @@ const Index = () => {
   }, [availableDates, selectedDate]);
 
   const selectedMatch = filteredMatches.find((m) => m.match_id === selectedMatchId) ?? filteredMatches[0];
+
+  // Reset timeline when match changes
+  useEffect(() => {
+    if (selectedMatch) {
+      setCurrentTime(selectedMatch.maxTs);
+    }
+  }, [selectedMatch?.match_id]);
+
   const humanCount = selectedMatch?.players.filter((p) => !p.is_bot).length ?? 0;
   const botCount = selectedMatch?.players.filter((p) => p.is_bot).length ?? 0;
+
+  const toggleLayer = (layer: EventLayer) => {
+    setLayers((prev) => ({ ...prev, [layer]: !prev[layer] }));
+  };
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-card">
-        <div className="container max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
           <Crosshair className="h-6 w-6 text-primary" />
           <h1 className="text-xl font-semibold text-foreground">Game Analytics</h1>
         </div>
       </header>
 
-      <main className="container max-w-5xl mx-auto px-4 py-8 space-y-6">
+      <main className="container max-w-6xl mx-auto px-4 py-6 space-y-5">
         {/* Filter bar */}
         <div className="flex flex-wrap items-end gap-4">
-          <div className="space-y-1.5 min-w-[180px]">
+          <div className="space-y-1.5 min-w-[160px]">
             <label className="text-sm font-medium text-foreground">Map</label>
             <Select value={selectedMap} onValueChange={setSelectedMap}>
-              <SelectTrigger>
-                <SelectValue placeholder="All maps" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All maps" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Maps</SelectItem>
                 {ALL_MAPS.map((name) => (
@@ -110,12 +128,10 @@ const Index = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5 min-w-[180px]">
+          <div className="space-y-1.5 min-w-[160px]">
             <label className="text-sm font-medium text-foreground">Date</label>
             <Select value={selectedDate} onValueChange={setSelectedDate}>
-              <SelectTrigger>
-                <SelectValue placeholder="All dates" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="All dates" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Dates</SelectItem>
                 {availableDates.map((d) => (
@@ -125,12 +141,10 @@ const Index = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5 min-w-[260px]">
+          <div className="space-y-1.5 min-w-[220px]">
             <label className="text-sm font-medium text-foreground">Match</label>
             <Select value={selectedMatchId} onValueChange={setSelectedMatchId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select match" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Select match" /></SelectTrigger>
               <SelectContent>
                 {filteredMatches.map((m) => (
                   <SelectItem key={m.match_id} value={m.match_id}>
@@ -142,7 +156,7 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Match info + minimap */}
+        {/* Controls + Match info */}
         {selectedMatch && (
           <div className="space-y-4">
             <div className="flex items-center gap-6 text-sm text-muted-foreground">
@@ -157,8 +171,27 @@ const Index = () => {
                 <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "hsl(var(--player-bot))" }} />
                 {botCount} bots
               </span>
+              <span className="text-xs">
+                {selectedMatch.events.length} events
+              </span>
             </div>
-            <Minimap match={selectedMatch} />
+
+            <EventControls
+              layers={layers}
+              onToggleLayer={toggleLayer}
+              heatmapMode={heatmapMode}
+              onHeatmapChange={setHeatmapMode}
+              timeRange={[selectedMatch.minTs, selectedMatch.maxTs]}
+              currentTime={currentTime}
+              onTimeChange={setCurrentTime}
+            />
+
+            <Minimap
+              match={selectedMatch}
+              layers={layers}
+              heatmapMode={heatmapMode}
+              currentTime={currentTime}
+            />
           </div>
         )}
       </main>
