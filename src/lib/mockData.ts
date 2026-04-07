@@ -4,6 +4,7 @@ export const MOCK_MATCHES: MatchData[] = [
   {
     match_id: "demo-001",
     map_name: "AmbroseValley",
+    date: "February 10",
     players: [
       { player_id: "Player1", x: -100, z: -200, is_bot: false },
       { player_id: "Player2", x: 50, z: 100, is_bot: false },
