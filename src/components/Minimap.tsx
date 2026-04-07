@@ -170,10 +170,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
               .filter((e) => e.event === "Kill" || e.event === "BotKill")
               .map((e, i) => {
                 const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                const color =
-                  e.event === "Kill"
-                    ? "hsl(var(--event-kill))"
-                    : "hsl(var(--event-botkill))";
+                const color = "hsl(var(--event-kill))";
                 return (
                   <circle
                     key={`kl-${i}`}
