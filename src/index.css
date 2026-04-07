@@ -41,7 +41,7 @@
     /* Event colors */
     --event-movement-human: 200 80% 65%;
     --event-movement-bot: 0 60% 65%;
-    --event-kill: 142 70% 50%;
+    --event-kill: 142 70% 30%;
     --event-botkill: 45 90% 55%;
     --event-death: 0 80% 55%;
     --event-storm: 270 60% 55%;
