@@ -136,7 +136,6 @@ const Index = () => {
                   <SelectItem key={m.match_id} value={m.match_id}>
                     {m.match_id.slice(0, 8)}…
                   </SelectItem>
-                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
