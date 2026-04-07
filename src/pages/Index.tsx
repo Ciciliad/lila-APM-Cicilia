@@ -41,9 +41,20 @@ const Index = () => {
         try {
           const res = await fetch(df.path);
           if (!res.ok) continue;
-          const data: RawEvent[] = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
-            results.push(...transformRawEvents(data, df.label));
+          const data = await res.json();
+          let events: RawEvent[] = [];
+          if (Array.isArray(data)) {
+            events = data;
+          } else if (data && typeof data === "object") {
+            // Data is keyed by match_id: { "match_id": [...events] }
+            for (const arr of Object.values(data)) {
+              if (Array.isArray(arr)) events.push(...(arr as RawEvent[]));
+            }
+          }
+          if (events.length > 0) {
+            // Use date field from first event if available, otherwise use file label
+            const date = events[0]?.date ?? df.label;
+            results.push(...transformRawEvents(events, date));
           }
         } catch {
           // skip
