@@ -1,7 +1,6 @@
 import { EventLayer, HeatmapMode } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
