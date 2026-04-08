@@ -30,14 +30,7 @@ const EventControls = ({
   onToggleLayer,
   heatmapMode,
   onHeatmapChange,
-  timeRange,
-  currentTime,
-  onTimeChange,
 }: EventControlsProps) => {
-  const [minTs, maxTs] = timeRange;
-  const duration = maxTs - minTs;
-  const pct = duration > 0 ? ((currentTime - minTs) / duration) * 100 : 100;
-
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4">
       {/* Layer toggles */}
