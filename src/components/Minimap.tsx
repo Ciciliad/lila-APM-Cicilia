@@ -186,7 +186,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
           backgroundSize: `${zoom * 100}%`,
           cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
         }}
-        onWheel={handleWheel}
+        
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
