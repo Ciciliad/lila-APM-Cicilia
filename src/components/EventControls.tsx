@@ -15,9 +15,6 @@ interface EventControlsProps {
   onToggleLayer: (layer: EventLayer) => void;
   heatmapMode: HeatmapMode;
   onHeatmapChange: (mode: HeatmapMode) => void;
-  timeRange: [number, number]; // [min, max] ts
-  currentTime: number;
-  onTimeChange: (ts: number) => void;
 }
 
 const LAYER_CONFIG: { key: EventLayer; label: string; color: string }[] = [
