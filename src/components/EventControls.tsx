@@ -1,7 +1,6 @@
 import { EventLayer, HeatmapMode } from "@/lib/types";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -15,9 +14,6 @@ interface EventControlsProps {
   onToggleLayer: (layer: EventLayer) => void;
   heatmapMode: HeatmapMode;
   onHeatmapChange: (mode: HeatmapMode) => void;
-  timeRange: [number, number]; // [min, max] ts
-  currentTime: number;
-  onTimeChange: (ts: number) => void;
 }
 
 const LAYER_CONFIG: { key: EventLayer; label: string; color: string }[] = [
@@ -33,14 +29,7 @@ const EventControls = ({
   onToggleLayer,
   heatmapMode,
   onHeatmapChange,
-  timeRange,
-  currentTime,
-  onTimeChange,
 }: EventControlsProps) => {
-  const [minTs, maxTs] = timeRange;
-  const duration = maxTs - minTs;
-  const pct = duration > 0 ? ((currentTime - minTs) / duration) * 100 : 100;
-
   return (
     <div className="space-y-4 rounded-lg border border-border bg-card p-4">
       {/* Layer toggles */}
@@ -82,21 +71,6 @@ const EventControls = ({
             <SelectItem value="deaths">Deaths</SelectItem>
           </SelectContent>
         </Select>
-      </div>
-
-      {/* Timeline slider */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-semibold text-foreground">Timeline</Label>
-          <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
-        </div>
-        <Slider
-          min={minTs}
-          max={maxTs || 1}
-          step={Math.max(1, Math.floor(duration / 500))}
-          value={[currentTime]}
-          onValueChange={([v]) => onTimeChange(v)}
-        />
       </div>
     </div>
   );

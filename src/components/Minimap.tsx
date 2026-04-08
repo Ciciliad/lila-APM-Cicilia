@@ -10,7 +10,7 @@ interface MinimapViewerProps {
 }
 
 const MAP_SIZE = 1024;
-const GRID_SIZE = 32; // heatmap grid cells
+const GRID_SIZE = 32;
 
 function eventToLayer(event: string): EventLayer | null {
   switch (event) {
@@ -37,27 +37,34 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Zoom & pan state
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const lastMouse = useRef({ x: 0, y: 0 });
+  // Track touches for two-finger pan
+  const lastTouchCenter = useRef<{ x: number; y: number } | null>(null);
+  const lastTouchDist = useRef<number | null>(null);
 
-  // Reset zoom/pan when match changes
   useEffect(() => {
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, [match.match_id]);
 
-  // Attach wheel listener with passive:false to allow preventDefault
+  function clampPan(x: number, y: number, z: number) {
+    const limit = (z - 1) / (2 * z);
+    return {
+      x: Math.min(limit, Math.max(-limit, x)),
+      y: Math.min(limit, Math.max(-limit, y)),
+    };
+  }
+
+  // Wheel zoom (pinch / ctrl+scroll)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
-      // Only zoom with pinch (ctrlKey/metaKey set by trackpad pinch) — not regular scroll
       if (!e.ctrlKey && !e.metaKey) return;
-
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const mx = (e.clientX - rect.left) / rect.width;
@@ -66,16 +73,10 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
       setZoom((prevZoom) => {
         const factor = Math.pow(1.004, -e.deltaY);
         const newZoom = Math.min(20, Math.max(1, prevZoom * factor));
-
         setPan((prevPan) => {
           const s = newZoom / prevZoom;
-          return clampPan(
-            mx - s * (mx - prevPan.x),
-            my - s * (my - prevPan.y),
-            newZoom
-          );
+          return clampPan(mx - s * (mx - prevPan.x), my - s * (my - prevPan.y), newZoom);
         });
-
         return newZoom;
       });
     };
@@ -84,6 +85,78 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
+  // Touch handlers for two-finger pan + pinch zoom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        lastTouchCenter.current = {
+          x: (t0.clientX + t1.clientX) / 2,
+          y: (t0.clientY + t1.clientY) / 2,
+        };
+        lastTouchDist.current = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        const t0 = e.touches[0];
+        const t1 = e.touches[1];
+        const cx = (t0.clientX + t1.clientX) / 2;
+        const cy = (t0.clientY + t1.clientY) / 2;
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+
+        if (lastTouchCenter.current && lastTouchDist.current) {
+          const dx = (cx - lastTouchCenter.current.x) / rect.width;
+          const dy = (cy - lastTouchCenter.current.y) / rect.height;
+          const scaleFactor = dist / lastTouchDist.current;
+
+          setZoom((prevZoom) => {
+            const newZoom = Math.min(20, Math.max(1, prevZoom * scaleFactor));
+            const mx = (cx - rect.left) / rect.width;
+            const my = (cy - rect.top) / rect.height;
+            setPan((prevPan) => {
+              const s = newZoom / prevZoom;
+              return clampPan(
+                mx - s * (mx - prevPan.x) + dx,
+                my - s * (my - prevPan.y) + dy,
+                newZoom
+              );
+            });
+            return newZoom;
+          });
+        }
+
+        lastTouchCenter.current = { x: cx, y: cy };
+        lastTouchDist.current = dist;
+      }
+    };
+
+    const onTouchEnd = () => {
+      lastTouchCenter.current = null;
+      lastTouchDist.current = null;
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("touchcancel", onTouchEnd);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+    };
+  }, []);
+
+  // Mouse drag pan
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
     e.preventDefault();
@@ -103,23 +176,12 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
-  function clampPan(x: number, y: number, z: number) {
-    const limit = (z - 1) / (2 * z);
-    return {
-      x: Math.min(limit, Math.max(-limit, x)),
-      y: Math.min(limit, Math.max(-limit, y)),
-    };
-  }
-
-  // Filter events by time
   const visibleEvents = useMemo(() => {
     return match.events.filter((e) => e.ts <= currentTime);
   }, [match.events, currentTime]);
 
-  // Build heatmap grid
   const heatmapData = useMemo(() => {
     if (heatmapMode === "none" || !config) return null;
-
     const targetEvents: string[] =
       heatmapMode === "movement"
         ? ["Position", "BotPosition"]
@@ -127,9 +189,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
         ? ["Kill", "BotKill"]
         : ["Killed", "BotKilled", "KilledByStorm"];
 
-    const grid = Array.from({ length: GRID_SIZE }, () =>
-      new Float32Array(GRID_SIZE)
-    );
+    const grid = Array.from({ length: GRID_SIZE }, () => new Float32Array(GRID_SIZE));
     let max = 0;
 
     for (const e of visibleEvents) {
@@ -140,7 +200,6 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
       grid[gy][gx]++;
       if (grid[gy][gx] > max) max = grid[gy][gx];
     }
-
     return { grid, max };
   }, [visibleEvents, heatmapMode, config]);
 
@@ -153,15 +212,9 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
   }
 
   const cellSize = MAP_SIZE / GRID_SIZE;
-
   const heatColor =
-    heatmapMode === "movement"
-      ? [200, 80]
-      : heatmapMode === "kills"
-      ? [142, 70]
-      : [0, 80]; // h, s for HSL
+    heatmapMode === "movement" ? [200, 80] : heatmapMode === "kills" ? [142, 70] : [0, 80];
 
-  // Compute SVG viewBox based on zoom & pan
   const vbSize = MAP_SIZE / zoom;
   const vbX = (MAP_SIZE - vbSize) / 2 - pan.x * MAP_SIZE;
   const vbY = (MAP_SIZE - vbSize) / 2 - pan.y * MAP_SIZE;
@@ -178,7 +231,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
       )}
       <div
         ref={containerRef}
-        className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
+        className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm touch-none"
         style={{
           background: !config.image ? `hsl(var(--minimap-bg))` : undefined,
           cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
@@ -193,160 +246,76 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
           viewBox={`${vbX} ${vbY} ${vbSize} ${vbSize}`}
           className="absolute inset-0 w-full h-full"
         >
-          {/* Map image inside SVG so it zooms/pans with markers */}
           {config.image && (
-            <image
-              href={config.image}
-              x={0}
-              y={0}
-              width={MAP_SIZE}
-              height={MAP_SIZE}
-              preserveAspectRatio="none"
-            />
+            <image href={config.image} x={0} y={0} width={MAP_SIZE} height={MAP_SIZE} preserveAspectRatio="none" />
           )}
-          {/* Heatmap overlay */}
-          {heatmapData &&
-            heatmapData.max > 0 &&
+          {heatmapData && heatmapData.max > 0 &&
             heatmapData.grid.map((row, gy) =>
               Array.from(row).map((val, gx) => {
                 if (val === 0) return null;
                 const intensity = val / heatmapData.max;
                 return (
-                  <rect
-                    key={`h-${gy}-${gx}`}
-                    x={gx * cellSize}
-                    y={gy * cellSize}
-                    width={cellSize}
-                    height={cellSize}
-                    fill={`hsla(${heatColor[0]}, ${heatColor[1]}%, 50%, ${intensity * 0.7})`}
-                    rx={2}
-                  />
+                  <rect key={`h-${gy}-${gx}`} x={gx * cellSize} y={gy * cellSize} width={cellSize} height={cellSize}
+                    fill={`hsla(${heatColor[0]}, ${heatColor[1]}%, 50%, ${intensity * 0.7})`} rx={2} />
                 );
               })
             )}
 
-          {/* Movement events (subtle) */}
-          {layers.movement &&
-            visibleEvents
-              .filter((e) => e.event === "Position" || e.event === "BotPosition")
-              .map((e, i) => {
-                const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                return (
-                  <circle
-                    key={`mv-${i}`}
-                    cx={px}
-                    cy={py}
-                    r={2.5}
-                    fill={
-                      e.is_bot
-                        ? "hsl(var(--event-movement-bot))"
-                        : "hsl(var(--event-movement-human))"
-                    }
-                    opacity={0.25}
-                  />
-                );
-              })}
+          {layers.movement && visibleEvents
+            .filter((e) => e.event === "Position" || e.event === "BotPosition")
+            .map((e, i) => {
+              const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
+              return <circle key={`mv-${i}`} cx={px} cy={py} r={2.5}
+                fill={e.is_bot ? "hsl(var(--event-movement-bot))" : "hsl(var(--event-movement-human))"} opacity={0.25} />;
+            })}
 
-          {/* Loot events */}
-          {layers.loot &&
-            visibleEvents
-              .filter((e) => e.event === "Loot")
-              .map((e, i) => {
-                const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                return (
-                  <circle
-                    key={`lt-${i}`}
-                    cx={px}
-                    cy={py}
-                    r={4}
-                    fill="hsl(var(--event-loot))"
-                    opacity={0.6}
-                  >
-                    <title>Loot — {e.player_id}</title>
-                  </circle>
-                );
-              })}
+          {layers.loot && visibleEvents
+            .filter((e) => e.event === "Loot")
+            .map((e, i) => {
+              const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
+              return <circle key={`lt-${i}`} cx={px} cy={py} r={4} fill="hsl(var(--event-loot))" opacity={0.6}>
+                <title>Loot — {e.player_id}</title>
+              </circle>;
+            })}
 
-          {/* Kill events */}
-          {layers.kills &&
-            visibleEvents
-              .filter((e) => e.event === "Kill" || e.event === "BotKill")
-              .map((e, i) => {
-                const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                const color = "hsl(var(--event-kill))";
-                return (
-                  <circle
-                    key={`kl-${i}`}
-                    cx={px}
-                    cy={py}
-                    r={5}
-                    fill={color}
-                    stroke={color}
-                    strokeWidth={2}
-                    fillOpacity={0.8}
-                  >
-                    <title>
-                      {e.event} — {e.player_id}
-                    </title>
-                  </circle>
-                );
-              })}
+          {layers.kills && visibleEvents
+            .filter((e) => e.event === "Kill" || e.event === "BotKill")
+            .map((e, i) => {
+              const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
+              const color = "hsl(var(--event-kill))";
+              return <circle key={`kl-${i}`} cx={px} cy={py} r={5} fill={color} stroke={color} strokeWidth={2} fillOpacity={0.8}>
+                <title>{e.event} — {e.player_id}</title>
+              </circle>;
+            })}
 
-          {/* Death events (cross marker) */}
-          {layers.deaths &&
-            visibleEvents
-              .filter((e) => e.event === "Killed" || e.event === "BotKilled")
-              .map((e, i) => {
-                const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                const s = 5;
-                return (
-                  <g key={`dt-${i}`} opacity={0.9}>
-                    <line
-                      x1={px - s}
-                      y1={py - s}
-                      x2={px + s}
-                      y2={py + s}
-                      stroke="hsl(var(--event-death))"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                    />
-                    <line
-                      x1={px + s}
-                      y1={py - s}
-                      x2={px - s}
-                      y2={py + s}
-                      stroke="hsl(var(--event-death))"
-                      strokeWidth={2.5}
-                      strokeLinecap="round"
-                    />
-                    <title>
-                      {e.event} — {e.player_id}
-                    </title>
-                  </g>
-                );
-              })}
+          {layers.deaths && visibleEvents
+            .filter((e) => e.event === "Killed" || e.event === "BotKilled")
+            .map((e, i) => {
+              const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
+              const s = 5;
+              return (
+                <g key={`dt-${i}`} opacity={0.9}>
+                  <line x1={px - s} y1={py - s} x2={px + s} y2={py + s} stroke="hsl(var(--event-death))" strokeWidth={2.5} strokeLinecap="round" />
+                  <line x1={px + s} y1={py - s} x2={px - s} y2={py + s} stroke="hsl(var(--event-death))" strokeWidth={2.5} strokeLinecap="round" />
+                  <title>{e.event} — {e.player_id}</title>
+                </g>
+              );
+            })}
 
-          {/* Storm deaths (diamond marker) */}
-          {layers.storm &&
-            visibleEvents
-              .filter((e) => e.event === "KilledByStorm")
-              .map((e, i) => {
-                const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
-                const s = 6;
-                return (
-                  <polygon
-                    key={`st-${i}`}
-                    points={`${px},${py - s} ${px + s},${py} ${px},${py + s} ${px - s},${py}`}
-                    fill="hsl(var(--event-storm))"
-                    fillOpacity={0.85}
-                    stroke="hsl(var(--event-storm))"
-                    strokeWidth={1.5}
-                    strokeOpacity={0.5}
-                  >
-                    <title>KilledByStorm — {e.player_id}</title>
-                  </polygon>
-                );
-              })}
+          {layers.storm && visibleEvents
+            .filter((e) => e.event === "KilledByStorm")
+            .map((e, i) => {
+              const { px, py } = worldToPixel(e.x, e.z, config, MAP_SIZE);
+              const s = 6;
+              return (
+                <polygon key={`st-${i}`}
+                  points={`${px},${py - s} ${px + s},${py} ${px},${py + s} ${px - s},${py}`}
+                  fill="hsl(var(--event-storm))" fillOpacity={0.85}
+                  stroke="hsl(var(--event-storm))" strokeWidth={1.5} strokeOpacity={0.5}>
+                  <title>KilledByStorm — {e.player_id}</title>
+                </polygon>
+              );
+            })}
         </svg>
       </div>
     </div>
