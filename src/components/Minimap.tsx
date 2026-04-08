@@ -55,19 +55,19 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
+      // Only zoom with pinch (ctrlKey/metaKey set by trackpad pinch) — not regular scroll
+      if (!e.ctrlKey && !e.metaKey) return;
+
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      // Normalized mouse position 0-1 within container
       const mx = (e.clientX - rect.left) / rect.width;
       const my = (e.clientY - rect.top) / rect.height;
 
       setZoom((prevZoom) => {
-        // Gentle exponential zoom like Google Maps
-        const factor = Math.pow(1.002, -e.deltaY);
+        const factor = Math.pow(1.004, -e.deltaY);
         const newZoom = Math.min(20, Math.max(1, prevZoom * factor));
 
         setPan((prevPan) => {
-          // Zoom toward mouse cursor
           const s = newZoom / prevZoom;
           return clampPan(
             mx - s * (mx - prevPan.x),
@@ -87,6 +87,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
     e.preventDefault();
+    e.stopPropagation();
     setIsPanning(true);
     lastMouse.current = { x: e.clientX, y: e.clientY };
   }, [zoom]);
@@ -180,7 +181,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
         className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
         style={{
           background: !config.image ? `hsl(var(--minimap-bg))` : undefined,
-          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
+          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
