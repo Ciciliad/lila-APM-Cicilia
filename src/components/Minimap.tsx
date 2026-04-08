@@ -145,19 +145,41 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
       ? [142, 70]
       : [0, 80]; // h, s for HSL
 
+  // Compute SVG viewBox based on zoom & pan
+  const vbSize = MAP_SIZE / zoom;
+  const vbX = (MAP_SIZE - vbSize) / 2 - pan.x * MAP_SIZE;
+  const vbY = (MAP_SIZE - vbSize) / 2 - pan.y * MAP_SIZE;
+
   return (
     <div className="relative w-full max-w-[1024px] mx-auto">
+      {zoom > 1 && (
+        <button
+          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+          className="absolute top-2 right-2 z-10 px-2 py-1 text-xs rounded bg-card/80 border border-border text-foreground hover:bg-accent backdrop-blur-sm"
+        >
+          Reset Zoom ({zoom.toFixed(1)}×)
+        </button>
+      )}
       <div
+        ref={containerRef}
         className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
         style={{
           background: config.image
             ? `url(${config.image}) center/cover no-repeat`
             : `hsl(var(--minimap-bg))`,
+          backgroundPosition: `${50 + pan.x * 100}% ${50 + pan.y * 100}%`,
+          backgroundSize: `${zoom * 100}%`,
+          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
         }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
+          viewBox={`${vbX} ${vbY} ${vbSize} ${vbSize}`}
           className="absolute inset-0 w-full h-full"
         >
           {/* Heatmap overlay */}
