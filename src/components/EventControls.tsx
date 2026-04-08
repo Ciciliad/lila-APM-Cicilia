@@ -72,23 +72,9 @@ const EventControls = ({
           </SelectContent>
         </Select>
       </div>
-
-      {/* Timeline slider */}
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
-          <Label className="text-sm font-semibold text-foreground">Timeline</Label>
-          <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
-        </div>
-        <Slider
-          min={minTs}
-          max={maxTs || 1}
-          step={Math.max(1, Math.floor(duration / 500))}
-          value={[currentTime]}
-          onValueChange={([v]) => onTimeChange(v)}
-        />
-      </div>
     </div>
   );
+};
 };
 
 export default EventControls;
