@@ -75,6 +75,5 @@ const EventControls = ({
     </div>
   );
 };
-};
 
 export default EventControls;
