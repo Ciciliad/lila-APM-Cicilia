@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useState, useCallback, useEffect } from "react";
 import { MatchData, GameEvent, EventLayer, HeatmapMode } from "@/lib/types";
 import { MAP_CONFIGS, worldToPixel } from "@/lib/mapConfigs";
 
@@ -35,6 +35,65 @@ function eventToLayer(event: string): EventLayer | null {
 const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps) => {
   const config = MAP_CONFIGS[match.map_name];
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Zoom & pan state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // Reset zoom/pan when match changes
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [match.match_id]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) / rect.width;
+    const mouseY = (e.clientY - rect.top) / rect.height;
+
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    const newZoom = Math.min(10, Math.max(1, zoom + delta * zoom));
+
+    // Zoom toward mouse position
+    const scale = newZoom / zoom;
+    const newPanX = mouseX - scale * (mouseX - pan.x);
+    const newPanY = mouseY - scale * (mouseY - pan.y);
+
+    setZoom(newZoom);
+    setPan(clampPan(newPanX, newPanY, newZoom));
+  }, [zoom, pan]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    setIsPanning(true);
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [zoom, pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = (e.clientX - panStart.current.x) / rect.width;
+    const dy = (e.clientY - panStart.current.y) / rect.height;
+    setPan(clampPan(panStart.current.panX + dx, panStart.current.panY + dy, zoom));
+  }, [isPanning, zoom]);
+
+  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+
+  function clampPan(x: number, y: number, z: number) {
+    const limit = (z - 1) / z;
+    return {
+      x: Math.min(limit, Math.max(-limit, x)),
+      y: Math.min(limit, Math.max(-limit, y)),
+    };
+  }
 
   // Filter events by time
   const visibleEvents = useMemo(() => {
@@ -86,19 +145,41 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
       ? [142, 70]
       : [0, 80]; // h, s for HSL
 
+  // Compute SVG viewBox based on zoom & pan
+  const vbSize = MAP_SIZE / zoom;
+  const vbX = (MAP_SIZE - vbSize) / 2 - pan.x * MAP_SIZE;
+  const vbY = (MAP_SIZE - vbSize) / 2 - pan.y * MAP_SIZE;
+
   return (
     <div className="relative w-full max-w-[1024px] mx-auto">
+      {zoom > 1 && (
+        <button
+          onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
+          className="absolute top-2 right-2 z-10 px-2 py-1 text-xs rounded bg-card/80 border border-border text-foreground hover:bg-accent backdrop-blur-sm"
+        >
+          Reset Zoom ({zoom.toFixed(1)}×)
+        </button>
+      )}
       <div
+        ref={containerRef}
         className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
         style={{
           background: config.image
             ? `url(${config.image}) center/cover no-repeat`
             : `hsl(var(--minimap-bg))`,
+          backgroundPosition: `${50 + pan.x * 100}% ${50 + pan.y * 100}%`,
+          backgroundSize: `${zoom * 100}%`,
+          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
         }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
       >
         <svg
           ref={svgRef}
-          viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
+          viewBox={`${vbX} ${vbY} ${vbSize} ${vbSize}`}
           className="absolute inset-0 w-full h-full"
         >
           {/* Heatmap overlay */}
