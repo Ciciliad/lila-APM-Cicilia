@@ -87,6 +87,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
     e.preventDefault();
+    e.stopPropagation();
     setIsPanning(true);
     lastMouse.current = { x: e.clientX, y: e.clientY };
   }, [zoom]);
