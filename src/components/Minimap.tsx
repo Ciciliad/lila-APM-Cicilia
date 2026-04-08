@@ -179,14 +179,9 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
         ref={containerRef}
         className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
         style={{
-          background: config.image
-            ? `url(${config.image}) center/cover no-repeat`
-            : `hsl(var(--minimap-bg))`,
-          backgroundPosition: `${50 + pan.x * 100}% ${50 + pan.y * 100}%`,
-          backgroundSize: `${zoom * 100}%`,
+          background: !config.image ? `hsl(var(--minimap-bg))` : undefined,
           cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
         }}
-        
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -197,6 +192,17 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
           viewBox={`${vbX} ${vbY} ${vbSize} ${vbSize}`}
           className="absolute inset-0 w-full h-full"
         >
+          {/* Map image inside SVG so it zooms/pans with markers */}
+          {config.image && (
+            <image
+              href={config.image}
+              x={0}
+              y={0}
+              width={MAP_SIZE}
+              height={MAP_SIZE}
+              preserveAspectRatio="none"
+            />
+          )}
           {/* Heatmap overlay */}
           {heatmapData &&
             heatmapData.max > 0 &&
