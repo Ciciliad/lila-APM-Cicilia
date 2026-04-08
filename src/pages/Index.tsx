@@ -218,9 +218,6 @@ const Index = () => {
               onToggleLayer={toggleLayer}
               heatmapMode={heatmapMode}
               onHeatmapChange={setHeatmapMode}
-              timeRange={[selectedMatch.minTs, selectedMatch.maxTs]}
-              currentTime={currentTime}
-              onTimeChange={setCurrentTime}
             />
 
             <TimelinePlayback
