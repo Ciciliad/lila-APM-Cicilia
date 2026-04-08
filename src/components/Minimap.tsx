@@ -55,19 +55,19 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
     if (!el) return;
 
     const onWheel = (e: WheelEvent) => {
+      // Only zoom with pinch (ctrlKey/metaKey set by trackpad pinch) — not regular scroll
+      if (!e.ctrlKey && !e.metaKey) return;
+
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      // Normalized mouse position 0-1 within container
       const mx = (e.clientX - rect.left) / rect.width;
       const my = (e.clientY - rect.top) / rect.height;
 
       setZoom((prevZoom) => {
-        // Gentle exponential zoom like Google Maps
-        const factor = Math.pow(1.002, -e.deltaY);
+        const factor = Math.pow(1.004, -e.deltaY);
         const newZoom = Math.min(20, Math.max(1, prevZoom * factor));
 
         setPan((prevPan) => {
-          // Zoom toward mouse cursor
           const s = newZoom / prevZoom;
           return clampPan(
             mx - s * (mx - prevPan.x),
