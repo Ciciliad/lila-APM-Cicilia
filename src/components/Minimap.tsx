@@ -41,7 +41,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
-  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const lastMouse = useRef({ x: 0, y: 0 });
 
   // Reset zoom/pan when match changes
   useEffect(() => {
@@ -49,46 +49,61 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
     setPan({ x: 0, y: 0 });
   }, [match.match_id]);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const container = containerRef.current;
-    if (!container) return;
+  // Attach wheel listener with passive:false to allow preventDefault
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
 
-    const rect = container.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) / rect.width;
-    const mouseY = (e.clientY - rect.top) / rect.height;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      // Normalized mouse position 0-1 within container
+      const mx = (e.clientX - rect.left) / rect.width;
+      const my = (e.clientY - rect.top) / rect.height;
 
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
-    const newZoom = Math.min(10, Math.max(1, zoom + delta * zoom));
+      setZoom((prevZoom) => {
+        // Gentle exponential zoom like Google Maps
+        const factor = Math.pow(1.002, -e.deltaY);
+        const newZoom = Math.min(20, Math.max(1, prevZoom * factor));
 
-    // Zoom toward mouse position
-    const scale = newZoom / zoom;
-    const newPanX = mouseX - scale * (mouseX - pan.x);
-    const newPanY = mouseY - scale * (mouseY - pan.y);
+        setPan((prevPan) => {
+          // Zoom toward mouse cursor
+          const s = newZoom / prevZoom;
+          return clampPan(
+            mx - s * (mx - prevPan.x),
+            my - s * (my - prevPan.y),
+            newZoom
+          );
+        });
 
-    setZoom(newZoom);
-    setPan(clampPan(newPanX, newPanY, newZoom));
-  }, [zoom, pan]);
+        return newZoom;
+      });
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (zoom <= 1) return;
     e.preventDefault();
     setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-  }, [zoom, pan]);
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+  }, [zoom]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning || !containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const dx = (e.clientX - panStart.current.x) / rect.width;
-    const dy = (e.clientY - panStart.current.y) / rect.height;
-    setPan(clampPan(panStart.current.panX + dx, panStart.current.panY + dy, zoom));
+    const dx = (e.clientX - lastMouse.current.x) / rect.width;
+    const dy = (e.clientY - lastMouse.current.y) / rect.height;
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+    setPan((prev) => clampPan(prev.x + dx, prev.y + dy, zoom));
   }, [isPanning, zoom]);
 
   const handleMouseUp = useCallback(() => setIsPanning(false), []);
 
   function clampPan(x: number, y: number, z: number) {
-    const limit = (z - 1) / z;
+    const limit = (z - 1) / (2 * z);
     return {
       x: Math.min(limit, Math.max(-limit, x)),
       y: Math.min(limit, Math.max(-limit, y)),
@@ -171,7 +186,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
           backgroundSize: `${zoom * 100}%`,
           cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
         }}
-        onWheel={handleWheel}
+        
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
