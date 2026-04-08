@@ -181,7 +181,7 @@ const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps
         className="relative aspect-square w-full rounded-lg overflow-hidden border border-border shadow-sm"
         style={{
           background: !config.image ? `hsl(var(--minimap-bg))` : undefined,
-          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
+          cursor: zoom > 1 ? (isPanning ? 'grabbing' : 'grab') : 'default',
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
