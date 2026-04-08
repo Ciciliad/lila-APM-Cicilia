@@ -35,6 +35,65 @@ function eventToLayer(event: string): EventLayer | null {
 const Minimap = ({ match, layers, heatmapMode, currentTime }: MinimapViewerProps) => {
   const config = MAP_CONFIGS[match.map_name];
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Zoom & pan state
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const panStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+
+  // Reset zoom/pan when match changes
+  useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [match.match_id]);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mouseX = (e.clientX - rect.left) / rect.width;
+    const mouseY = (e.clientY - rect.top) / rect.height;
+
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    const newZoom = Math.min(10, Math.max(1, zoom + delta * zoom));
+
+    // Zoom toward mouse position
+    const scale = newZoom / zoom;
+    const newPanX = mouseX - scale * (mouseX - pan.x);
+    const newPanY = mouseY - scale * (mouseY - pan.y);
+
+    setZoom(newZoom);
+    setPan(clampPan(newPanX, newPanY, newZoom));
+  }, [zoom, pan]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (zoom <= 1) return;
+    e.preventDefault();
+    setIsPanning(true);
+    panStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [zoom, pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isPanning || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const dx = (e.clientX - panStart.current.x) / rect.width;
+    const dy = (e.clientY - panStart.current.y) / rect.height;
+    setPan(clampPan(panStart.current.panX + dx, panStart.current.panY + dy, zoom));
+  }, [isPanning, zoom]);
+
+  const handleMouseUp = useCallback(() => setIsPanning(false), []);
+
+  function clampPan(x: number, y: number, z: number) {
+    const limit = (z - 1) / z;
+    return {
+      x: Math.min(limit, Math.max(-limit, x)),
+      y: Math.min(limit, Math.max(-limit, y)),
+    };
+  }
 
   // Filter events by time
   const visibleEvents = useMemo(() => {
