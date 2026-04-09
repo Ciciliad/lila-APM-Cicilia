@@ -32,6 +32,14 @@ const TimelinePlayback = ({ timeRange, currentTime, onTimeChange }: TimelinePlay
   const [speed, setSpeed] = useState(1);
   const rafRef = useRef<number>(0);
   const lastFrameRef = useRef<number>(0);
+  const currentTimeRef = useRef(currentTime);
+  const speedRef = useRef(speed);
+  const onTimeChangeRef = useRef(onTimeChange);
+
+  // Keep refs in sync
+  currentTimeRef.current = currentTime;
+  speedRef.current = speed;
+  onTimeChangeRef.current = onTimeChange;
 
   const pct = duration > 0 ? ((currentTime - minTs) / duration) * 100 : 100;
 
@@ -39,29 +47,31 @@ const TimelinePlayback = ({ timeRange, currentTime, onTimeChange }: TimelinePlay
   useEffect(() => {
     if (!playing) return;
 
+    lastFrameRef.current = 0;
+
     const tick = (now: number) => {
       if (lastFrameRef.current === 0) {
         lastFrameRef.current = now;
+        rafRef.current = requestAnimationFrame(tick);
+        return;
       }
       const dt = now - lastFrameRef.current;
       lastFrameRef.current = now;
 
-      // Map real-time to game-time: full duration plays in ~30s at 1× speed
-      const gameStep = (duration / 30000) * dt * speed;
+      const gameStep = (duration / 30000) * dt * speedRef.current;
+      const next = Math.min(maxTs, currentTimeRef.current + gameStep);
+      onTimeChangeRef.current(next);
 
-      onTimeChange(Math.min(maxTs, currentTime + gameStep));
-
-      if (currentTime >= maxTs) {
+      if (next >= maxTs) {
         setPlaying(false);
         return;
       }
       rafRef.current = requestAnimationFrame(tick);
     };
 
-    lastFrameRef.current = 0;
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [playing, speed, currentTime, minTs, maxTs, duration, onTimeChange]);
+  }, [playing, minTs, maxTs, duration]);
 
   const togglePlay = useCallback(() => {
     if (currentTime >= maxTs) {
