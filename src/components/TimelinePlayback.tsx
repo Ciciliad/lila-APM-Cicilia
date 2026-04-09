@@ -95,6 +95,17 @@ const TimelinePlayback = ({ timeRange, currentTime, onTimeChange }: TimelinePlay
     onTimeChange(maxTs);
   }, [maxTs, onTimeChange]);
 
+  if (duration === 0) {
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        <div className="flex items-center justify-between">
+          <Label className="text-sm font-semibold text-foreground">Timeline</Label>
+          <span className="text-xs text-muted-foreground">All events share the same timestamp — playback not available for this match.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between">
