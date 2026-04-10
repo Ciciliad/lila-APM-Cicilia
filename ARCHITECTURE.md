@@ -71,8 +71,9 @@ I'm assuming here the player (user_id) involved in that event is killed by some 
 
 **Trade offs**
 
-Decision      |  Chosen | Alternative   |Reason
-Data storage  | JSON    | Backend API   |Faster to implement
-Mapping location|   Frontend    | Precomputed   | Flexibility
+Decision         | Chosen     | Alternative   | Reason <br>
+Data storage     | JSON       | Backend API   | Faster to implement <br>
+Mapping location | Frontend   | Precomputed   | Flexibility <br>
+
 
 
