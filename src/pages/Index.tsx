@@ -178,7 +178,8 @@ const Index = () => {
               )}
             </div>
           </div>
-
+          </div>
+        </div>
 
         {/* Controls + Match info */}
         {selectedMatch && (
