@@ -178,21 +178,6 @@ const Index = () => {
               )}
             </div>
           </div>
-
-          {/* Match selector */}
-          <div className="space-y-1.5 min-w-[220px]">
-            <label className="text-sm font-medium text-foreground">Match</label>
-            <Select value={selectedMatchId} onValueChange={setSelectedMatchId}>
-              <SelectTrigger><SelectValue placeholder="Select match" /></SelectTrigger>
-              <SelectContent>
-                {filteredMatches.map((m) => (
-                  <SelectItem key={m.match_id} value={m.match_id}>
-                    {m.match_id.slice(0, 8)}…
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         {/* Controls + Match info */}
@@ -220,11 +205,28 @@ const Index = () => {
               onHeatmapChange={setHeatmapMode}
             />
 
-            <TimelinePlayback
-              timeRange={[selectedMatch.minTs, selectedMatch.maxTs]}
-              currentTime={currentTime}
-              onTimeChange={setCurrentTime}
-            />
+            {/* Match selector + Timeline */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-foreground">Match</label>
+                <Select value={selectedMatchId} onValueChange={setSelectedMatchId}>
+                  <SelectTrigger className="w-[240px]"><SelectValue placeholder="Select match" /></SelectTrigger>
+                  <SelectContent>
+                    {filteredMatches.map((m, idx) => (
+                      <SelectItem key={`${m.match_id}-${idx}`} value={m.match_id}>
+                        {m.match_id.slice(0, 8)}…
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <TimelinePlayback
+                timeRange={[selectedMatch.minTs, selectedMatch.maxTs]}
+                currentTime={currentTime}
+                onTimeChange={setCurrentTime}
+              />
+            </div>
 
             <Minimap
               match={selectedMatch}

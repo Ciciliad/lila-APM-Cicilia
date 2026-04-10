@@ -14,7 +14,7 @@ export interface RawEvent {
   map_id: string;
   x: number;
   z: number;
-  ts: number;
+  ts: number | string;
   event: string;
   is_bot: boolean;
   date?: string;

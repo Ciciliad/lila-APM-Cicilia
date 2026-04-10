@@ -5,6 +5,12 @@ const VALID_EVENTS = new Set<string>([
   "Killed", "BotKilled", "KilledByStorm", "Loot",
 ]);
 
+function parseTs(raw: unknown): number {
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") return new Date(raw).getTime();
+  return 0;
+}
+
 export function transformRawEvents(events: RawEvent[], date: string): MatchData[] {
   const matchMap = new Map<string, {
     map_name: string;
@@ -17,21 +23,23 @@ export function transformRawEvents(events: RawEvent[], date: string): MatchData[
   for (const e of events) {
     if (!VALID_EVENTS.has(e.event)) continue;
 
+    const ts = parseTs(e.ts);
+
     if (!matchMap.has(e.match_id)) {
       matchMap.set(e.match_id, {
         map_name: e.map_id,
         players: new Map(),
         events: [],
-        minTs: e.ts,
-        maxTs: e.ts,
+        minTs: ts,
+        maxTs: ts,
       });
     }
     const match = matchMap.get(e.match_id)!;
 
     // Track latest position per player
     const existing = match.players.get(e.user_id);
-    if (!existing || e.ts >= existing.ts) {
-      match.players.set(e.user_id, { x: e.x, z: e.z, ts: e.ts, is_bot: e.is_bot });
+    if (!existing || ts >= existing.ts) {
+      match.players.set(e.user_id, { x: e.x, z: e.z, ts, is_bot: e.is_bot });
     }
 
     // Store all events
@@ -39,13 +47,13 @@ export function transformRawEvents(events: RawEvent[], date: string): MatchData[
       player_id: e.user_id,
       x: e.x,
       z: e.z,
-      ts: e.ts,
+      ts,
       event: e.event as EventType,
       is_bot: e.is_bot,
     });
 
-    if (e.ts < match.minTs) match.minTs = e.ts;
-    if (e.ts > match.maxTs) match.maxTs = e.ts;
+    if (ts < match.minTs) match.minTs = ts;
+    if (ts > match.maxTs) match.maxTs = ts;
   }
 
   return Array.from(matchMap.entries()).map(([match_id, data]) => ({
