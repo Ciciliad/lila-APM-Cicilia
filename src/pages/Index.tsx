@@ -179,21 +179,6 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Match selector */}
-          <div className="space-y-1.5 min-w-[220px]">
-            <label className="text-sm font-medium text-foreground">Match</label>
-            <Select value={selectedMatchId} onValueChange={setSelectedMatchId}>
-              <SelectTrigger><SelectValue placeholder="Select match" /></SelectTrigger>
-              <SelectContent>
-                {filteredMatches.map((m) => (
-                  <SelectItem key={m.match_id} value={m.match_id}>
-                    {m.match_id.slice(0, 8)}…
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
 
         {/* Controls + Match info */}
         {selectedMatch && (
