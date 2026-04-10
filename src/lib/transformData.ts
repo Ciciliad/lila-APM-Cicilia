@@ -17,6 +17,9 @@ export function transformRawEvents(events: RawEvent[], date: string): MatchData[
   for (const e of events) {
     if (!VALID_EVENTS.has(e.event)) continue;
 
+    // Parse ts: could be a number already or a datetime string like "1970-01-21 11:52:40.465"
+    const ts = typeof e.ts === "number" ? e.ts : new Date(e.ts as unknown as string).getTime();
+
     if (!matchMap.has(e.match_id)) {
       matchMap.set(e.match_id, {
         map_name: e.map_id,
