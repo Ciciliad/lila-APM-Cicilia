@@ -10,6 +10,7 @@ This tool visualizes player behavior across maps in LILA BLACK using gameplay te
 Deployed URL: https://game-nav-helper.lovable.app
 
 
+
 #Features
 1. Player movement visualization on minimap
 2. Event markers (kills, deaths, loot, storm)
@@ -24,8 +25,8 @@ Deployed URL: https://game-nav-helper.lovable.app
 This tool helps Level Designers answer:
 
 
-Where do players move?
-Where do fights happen?
-Which areas are underutilized?
-Are deaths caused by combat or environment?
-How does gameplay evolve over time?
+- Where do players move?
+- Where do fights happen?
+- Which areas are underutilized?
+- Are deaths caused by combat or environment?
+- How does gameplay evolve over time?
