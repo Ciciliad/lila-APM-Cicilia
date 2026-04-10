@@ -43,6 +43,15 @@ const TimelinePlayback = ({ timeRange, currentTime, onTimeChange }: TimelinePlay
 
   const pct = duration > 0 ? ((currentTime - minTs) / duration) * 100 : 100;
 
+  // Format ms elapsed as MM:SS
+  const formatTime = (ms: number) => {
+    const elapsed = ms - minTs;
+    const totalSec = Math.max(0, Math.floor(elapsed / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+
   // Playback loop
   useEffect(() => {
     if (!playing) return;
@@ -110,7 +119,7 @@ const TimelinePlayback = ({ timeRange, currentTime, onTimeChange }: TimelinePlay
     <div className="space-y-2 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold text-foreground">Timeline</Label>
-        <span className="text-xs text-muted-foreground">{pct.toFixed(0)}%</span>
+        <span className="text-xs text-muted-foreground">{formatTime(currentTime)} / {formatTime(maxTs)}</span>
       </div>
 
       <Slider
