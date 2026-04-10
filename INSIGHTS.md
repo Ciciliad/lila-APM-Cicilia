@@ -86,6 +86,7 @@ Certain regions of the map show little to no player movement or interaction.
 - Map utilization ↑
 - Player exploration ↑
 - Session engagement time ↑
+
 **Why a Level Designer should care**
 
 

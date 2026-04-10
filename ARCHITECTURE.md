@@ -65,13 +65,11 @@ Easier to update mapping logic
 **Assumption**
 
 
-Killed event is | | `Killed` | A human player was killed by another human player |
-| from the README doc
+Killed event is (`Killed` : A human player was killed by another human player) from the README doc
 I'm assuming here the player (user_id) involved in that event is killed by some unknowm human(death of mentioned user_id)
 
 
 **Trade offs**
-
 
 Decision      |  Chosen | Alternative   |Reason
 Data storage  | JSON    | Backend API   |Faster to implement
